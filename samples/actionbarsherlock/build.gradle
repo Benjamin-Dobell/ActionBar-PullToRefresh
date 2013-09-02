@@ -8,10 +8,10 @@ android {
     compileSdkVersion 18
     buildToolsVersion '17.0.0'
     
-    defaultConfig {
+    /*defaultConfig {
         versionName project.VERSION_NAME
         versionCode Integer.parseInt(project.VERSION_CODE)
-    }
+    }*/
 
     signingConfigs { release }
 
@@ -30,7 +30,7 @@ android {
     }
 }
 
-def Properties props = new Properties()
+/*def Properties props = new Properties()
 props.load(new FileInputStream(file('signing.properties')))
 
 if (props.containsKey('STORE_FILE') && props.containsKey('STORE_PASSWORD') &&
@@ -41,4 +41,4 @@ if (props.containsKey('STORE_FILE') && props.containsKey('STORE_PASSWORD') &&
     android.signingConfigs.release.keyPassword = props['KEY_PASSWORD']
 } else {
     android.buildTypes.release.signingConfig = null
-}
+}*/

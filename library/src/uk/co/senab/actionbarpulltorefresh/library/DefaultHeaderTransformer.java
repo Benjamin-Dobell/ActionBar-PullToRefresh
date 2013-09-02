@@ -37,11 +37,21 @@ import android.widget.TextView;
  */
 public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransformer {
 
+	private static final int HIDDEN = 0;
+	private static final int PULLING = 1;
+	private static final int RELEASE_TO_REFRESH = 2;
+	private static final int REFRESHING = 3;
+	private static final int REFRESHING_MINIMIZED = 4;
+	private static final int ERROR = 5;
+
+
+	private int state = DefaultHeaderTransformer.HIDDEN;
+
     private ViewGroup mContentLayout;
     private TextView mHeaderTextView;
     private ProgressBar mHeaderProgressBar;
 
-    private CharSequence mPullRefreshLabel, mRefreshingLabel, mReleaseLabel;
+    private CharSequence mPullRefreshLabel, mRefreshingLabel, mReleaseLabel, mErrorLabel;
 
     private boolean mUseCustomProgressColor = false;
     private int mProgressDrawableColor;
@@ -70,6 +80,7 @@ public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransf
         mPullRefreshLabel = activity.getString(R.string.pull_to_refresh_pull_label);
         mRefreshingLabel = activity.getString(R.string.pull_to_refresh_refreshing_label);
         mReleaseLabel = activity.getString(R.string.pull_to_refresh_release_label);
+	    mErrorLabel = activity.getString(R.string.pull_to_refresh_error_label);
 
         // Retrieve the Action Bar size from the Activity's theme
         mContentLayout = (ViewGroup) headerView.findViewById(R.id.ptr_content);
@@ -105,6 +116,8 @@ public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransf
 
     @Override
     public void onReset() {
+	    state = DefaultHeaderTransformer.HIDDEN;
+
         // Reset Progress Bar
         if (mHeaderProgressBar != null) {
             mHeaderProgressBar.setVisibility(View.GONE);
@@ -126,6 +139,8 @@ public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransf
 
     @Override
     public void onPulled(float percentagePulled) {
+	    state = DefaultHeaderTransformer.PULLING;
+
         if (mHeaderProgressBar != null) {
             mHeaderProgressBar.setVisibility(View.VISIBLE);
             final float progress = mInterpolator.getInterpolation(percentagePulled);
@@ -135,6 +150,8 @@ public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransf
 
     @Override
     public void onRefreshStarted() {
+	    state = DefaultHeaderTransformer.REFRESHING;
+
         if (mHeaderTextView != null) {
             mHeaderTextView.setText(mRefreshingLabel);
         }
@@ -146,6 +163,8 @@ public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransf
 
     @Override
     public void onReleaseToRefresh() {
+	    state = DefaultHeaderTransformer.RELEASE_TO_REFRESH;
+
         if (mHeaderTextView != null) {
             mHeaderTextView.setText(mReleaseLabel);
         }
@@ -156,6 +175,8 @@ public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransf
 
     @Override
     public void onRefreshMinimized() {
+	    state = DefaultHeaderTransformer.REFRESHING_MINIMIZED;
+
         // Here we fade out most of the header, leaving just the progress bar
         if (mContentLayout != null) {
             mContentLayout.startAnimation(AnimationUtils
@@ -163,6 +184,20 @@ public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransf
             mContentLayout.setVisibility(View.INVISIBLE);
         }
     }
+
+	@Override
+	public void onRefreshError() {
+		state = DefaultHeaderTransformer.ERROR;
+
+		if (mHeaderTextView != null) {
+			mHeaderTextView.setText(mErrorLabel);
+		}
+		if (mHeaderProgressBar != null) {
+			mHeaderProgressBar.setVisibility(View.VISIBLE);
+			mHeaderProgressBar.setIndeterminate(false);
+			mHeaderProgressBar.setProgress(mHeaderProgressBar.getMax());
+		}
+	}
 
     /**
      * Set color to apply to the progress bar. Automatically enables usage of the custom color. Use
@@ -195,7 +230,7 @@ public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransf
      */
     public void setPullText(CharSequence pullText) {
         mPullRefreshLabel = pullText;
-        if (mHeaderTextView != null) {
+	    if (mHeaderTextView != null && (state == DefaultHeaderTransformer.PULLING || state == DefaultHeaderTransformer.HIDDEN)) {
             mHeaderTextView.setText(mPullRefreshLabel);
         }
     }
@@ -207,6 +242,10 @@ public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransf
      */
     public void setRefreshingText(CharSequence refreshingText) {
         mRefreshingLabel = refreshingText;
+
+	    if (mHeaderTextView != null && state == DefaultHeaderTransformer.REFRESHING) {
+		    mHeaderTextView.setText(mRefreshingLabel);
+	    }
     }
 
     /**
@@ -216,7 +255,23 @@ public class DefaultHeaderTransformer extends PullToRefreshAttacher.HeaderTransf
      */
     public void setReleaseText(CharSequence releaseText) {
         mReleaseLabel = releaseText;
+
+	    if (mHeaderTextView != null && state == DefaultHeaderTransformer.RELEASE_TO_REFRESH) {
+		    mHeaderTextView.setText(mReleaseLabel);
+	    }
     }
+
+	/**
+	 * Set Text to show to tell the user an error has occurred whilst refreshing.
+	 * @param errorText - Text to display.
+	 */
+	public void setErrorText(CharSequence errorText) {
+		mErrorLabel = errorText;
+
+		if (mHeaderTextView != null && state == DefaultHeaderTransformer.ERROR) {
+			mHeaderTextView.setText(mErrorLabel);
+		}
+	}
 
     private void applyProgressBarColor() {
         if (mHeaderProgressBar != null) {

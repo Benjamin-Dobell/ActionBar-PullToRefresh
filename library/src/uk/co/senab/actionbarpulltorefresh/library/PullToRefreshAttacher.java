@@ -47,6 +47,7 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
 	private static final float DEFAULT_REFRESH_SCROLL_DISTANCE = 0.5f;
 	private static final boolean DEFAULT_REFRESH_ON_UP = false;
 	private static final int DEFAULT_REFRESH_MINIMIZED_DELAY = 3 * 1000;
+	private static final int DEFAULT_ERROR_MINIMIZED_DELAY = 3 * 1000;
 	private static final boolean DEFAULT_REFRESH_MINIMIZE = true;
 
 	private static final boolean DEBUG = false;
@@ -73,6 +74,7 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
 	private final boolean mRefreshOnUp;
 	private final int mRefreshMinimizeDelay;
 	private final boolean mRefreshMinimize;
+	private int mErrorMinimizeDelay;
 
 	private final Handler mHandler = new Handler();
 
@@ -118,6 +120,7 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
 		mRefreshOnUp = options.refreshOnUp;
 		mRefreshMinimizeDelay = options.refreshMinimizeDelay;
 		mRefreshMinimize = options.refreshMinimize;
+		mErrorMinimizeDelay = options.errorMinimizeDelay;
 
 		// EnvironmentDelegate
 		mEnvironmentDelegate = options.environmentDelegate != null ? options.environmentDelegate
@@ -346,6 +349,15 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
 	 */
 	public final void setRefreshComplete() {
 		setRefreshingInt(null, false, false);
+	}
+
+	public final void setRefreshError() {
+		if (mIsRefreshing) {
+			mHeaderTransformer.onRefreshError();
+
+			mHandler.removeCallbacks(mRefreshMinimizeRunnable);
+			mHandler.postDelayed(mErrorMinimizeRunnable, mErrorMinimizeDelay);
+		}
 	}
 
 	/**
@@ -652,6 +664,8 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
 		    mHandler.removeCallbacks(mRefreshMinimizeRunnable);
         }
 
+		mHandler.removeCallbacks(mErrorMinimizeRunnable);
+
 		// Hide Header View
 		hideHeaderView();
 	}
@@ -779,6 +793,8 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
 		 * specified in {@link Options#refreshMinimizeDelay}.
 		 */
 		public void onRefreshMinimized() {}
+
+		public void onRefreshError() {}
 	}
 
 	/**
@@ -865,6 +881,11 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
 		 * only the progress bar signifying that a refresh is taking place.
 		 */
 		public int refreshMinimizeDelay = DEFAULT_REFRESH_MINIMIZED_DELAY;
+
+		/**
+		 * The delay after an error occurs before the error message fades out.
+		 */
+		public int errorMinimizeDelay = DEFAULT_ERROR_MINIMIZED_DELAY;
 
 		/**
 		 * Enable or disable the header 'minimization', which by default means that the majority of
@@ -974,4 +995,11 @@ public class PullToRefreshAttacher implements View.OnTouchListener {
 		}
 	};
 
+	private final Runnable mErrorMinimizeRunnable = new Runnable() {
+		@Override
+		public void run() {
+			resetTouch();
+			reset(false);
+		}
+	};
 }
